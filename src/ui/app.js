@@ -84,6 +84,8 @@
   const updateLatestVersionText = document.getElementById('update-latest-version-text');
   const btnDownloadUpdate = document.getElementById('btn-download-update');
   const btnCheckUpdates = document.getElementById('btn-check-updates');
+  const btnSendFeedback = document.getElementById('btn-send-feedback');
+  const btnOpenDiscussions = document.getElementById('btn-open-discussions');
 
   // Downloads Drawer
   const downloadsDrawer = document.getElementById('downloads-drawer');
@@ -278,6 +280,18 @@
   btnDownloadUpdate.addEventListener('click', () => {
     api.openExternalUrl(latestReleaseUrl);
   });
+
+  if (btnSendFeedback) {
+    btnSendFeedback.addEventListener('click', () => {
+      api.openExternalUrl('https://github.com/katungatigift391-svg/BRWSR/issues');
+    });
+  }
+
+  if (btnOpenDiscussions) {
+    btnOpenDiscussions.addEventListener('click', () => {
+      api.openExternalUrl('https://github.com/katungatigift391-svg/BRWSR/discussions');
+    });
+  }
 
   menuItemSettings.addEventListener('click', () => {
     closeAllDrawers();

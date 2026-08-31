@@ -11,6 +11,8 @@
   <img src="https://img.shields.io/badge/License-ISC-f59e0b?style=for-the-badge" alt="License">
 </p>
 
+> 💡 **Early Preview Notice**: BRWSR is currently in active pre-release development (`v1.0.0-preview`). Features, bypass heuristics, and performance improvements are being continuously refined. **Community feedback, site compatibility reports, and feature requests are warmly encouraged!**
+
 ---
 
 ## ⚡ What is BRWSR?
@@ -81,6 +83,17 @@ The compiled installer and portable executable will be placed in the `dist/` dir
 
 * **🔒 Zero-Telemetry Sandbox**  
   Chromium crash reporting (`breakpad`), background network sync, domain reliability logging, and telemetry pings are permanently disabled at the engine flag level. History, bookmarks, and settings are saved strictly to local JSON vaults.
+
+---
+
+## 💬 Community Feedback & Reporting Issues
+
+Since BRWSR is in active pre-release development, your direct feedback helps shape upcoming capabilities and resolve edge cases across different web platforms.
+
+### 📬 Where to Share Your Feedback:
+* 🐛 **Bug Reports & Broken Sites**: Open a ticket on our **[GitHub Issues](https://github.com/katungatigift391-svg/BRWSR/issues)** tracker with the URL and what happened.
+* 💡 **Feature Requests & Ideas**: Start a discussion on **[GitHub Discussions](https://github.com/katungatigift391-svg/BRWSR/discussions)** or file an Issue labeled `enhancement`.
+* ⚙️ **Direct In-App Feedback**: Open **Settings (`⚙️`)** in the browser toolbar and click **"🐛 Report an Issue"** or **"💡 Feature Ideas"** to be taken directly to the issue tracker.
 
 ---
 
