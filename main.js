@@ -119,7 +119,9 @@ function createMainWindow() {
   });
 
   mainWindow.setMenu(null);
+  mainWindow.setMenuBarVisibility(false);
   mainWindow.loadFile(path.join(__dirname, 'src', 'ui', 'index.html'));
+
 
   mainWindow.on('resize', () => {
     updateActiveViewBounds();
@@ -892,8 +894,13 @@ ipcMain.handle('rules:delete', (e, { domain, ruleId }) => {
 /* -------------------------------------------------------------------------- */
 
 app.whenReady().then(() => {
+  // Re-apply here — the top-level call sometimes doesn't persist through
+  // Electron's initialization on certain versions/platforms.
+  Menu.setApplicationMenu(null);
   setupNetworkInterceptors();
   createMainWindow();
+  // Confirm removal after window creation as well
+  Menu.setApplicationMenu(null);
 });
 
 app.on('window-all-closed', () => {
