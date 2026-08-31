@@ -11,7 +11,7 @@ permissions:
 
 jobs:
   build-desktop:
-    name: Build Desktop (Windows & Linux)
+    name: Build Desktop Windows Binaries
     runs-on: windows-latest
 
     steps:
@@ -32,7 +32,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Create GitHub Release
+      - name: Create Clean GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ github.ref_name }}
@@ -40,6 +40,8 @@ jobs:
           draft: false
           prerelease: false
           generate_release_notes: true
-          files: dist/*.exe
+          files: |
+            dist/BRWSR-Setup-*.exe
+            dist/BRWSR-Portable-*.exe
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

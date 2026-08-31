@@ -62,6 +62,7 @@
       "requestedExecutionLevel": "asInvoker"
     },
     "nsis": {
+      "artifactName": "BRWSR-Setup-${version}.exe",
       "oneClick": false,
       "allowToChangeInstallationDirectory": true,
       "allowElevation": true,
