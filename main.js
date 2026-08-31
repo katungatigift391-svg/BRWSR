@@ -18,10 +18,12 @@ app.commandLine.appendSwitch('no-pings');
 /* 2. Persistent Storage (Rules, History, Bookmarks, Settings)                */
 /* -------------------------------------------------------------------------- */
 
-const RULES_PATH = path.join(__dirname, 'rules.json');
-const HISTORY_PATH = path.join(__dirname, 'history.json');
-const BOOKMARKS_PATH = path.join(__dirname, 'bookmarks.json');
-const SETTINGS_PATH = path.join(__dirname, 'settings.json');
+const getStorageDir = () => app.isPackaged ? app.getPath('userData') : __dirname;
+
+const RULES_PATH = path.join(getStorageDir(), 'rules.json');
+const HISTORY_PATH = path.join(getStorageDir(), 'history.json');
+const BOOKMARKS_PATH = path.join(getStorageDir(), 'bookmarks.json');
+const SETTINGS_PATH = path.join(getStorageDir(), 'settings.json');
 
 let rulesData = { domains: {} };
 let historyData = [];
