@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BRWSR // Surgical Browser</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+  <div id="browser-shell">
+    <!-- Top Chrome Layer (Hidden automatically during True Fullscreen Videos) -->
+    <header id="chrome-header">
+      <!-- Tabs Strip -->
+      <div id="tabs-strip">
+        <div id="tabs-container">
+          <!-- Dynamic Tabs Injected Here -->
+        </div>
+        <button id="btn-new-tab" class="btn-icon" title="New Tab (Ctrl+T)">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>
+        </button>
+      </div>
+
+      <!-- Main Navigation Toolbar -->
+      <div id="toolbar">
+        <!-- Navigation Controls -->
+        <div class="nav-controls">
+          <button id="btn-back" class="btn-icon" title="Back (Alt+Left)" disabled>
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+          </button>
+          <button id="btn-forward" class="btn-icon" title="Forward (Alt+Right)" disabled>
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+          </button>
+          <button id="btn-reload" class="btn-icon" title="Reload (Ctrl+R)">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"/></svg>
+          </button>
+        </div>
+
+        <!-- Address Omnibox with Bookmark Star -->
+        <div id="omnibox-wrapper">
+          <span id="security-badge" class="security-badge" title="Local Private Sandbox">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+          </span>
+          <input type="text" id="url-input" placeholder="Search or type a URL..." autocomplete="off" spellcheck="false">
+          <button id="btn-bookmark" class="btn-icon-sm bookmark-btn" title="Bookmark page (Ctrl+D)">★</button>
+          <button id="btn-clear-url" class="btn-icon-sm" title="Clear URL" style="display:none;">✕</button>
+        </div>
+
+        <!-- Dynamic Media Download Button (Illuminates next to Omnibox when video detected) -->
+        <button id="btn-dynamic-media" class="dynamic-media-btn" title="1-Click Download Video Stream" style="display:none;">
+          <span class="icon">🎥 ⬇</span>
+          <span id="dynamic-media-label">1 Video Detected</span>
+        </button>
+
+        <!-- Active Download Progress Pill -->
+        <button id="btn-toolbar-downloads" class="toolbar-download-pill" title="Downloads (Ctrl+J)" style="display:none;">
+          <span class="dl-icon">⬇</span>
+          <span id="dl-toolbar-speed">0 KB/s</span>
+          <div class="dl-mini-bar-bg"><div id="dl-toolbar-bar" class="dl-mini-bar"></div></div>
+        </button>
+
+        <!-- Surgical Deck Toggle Button -->
+        <button id="btn-surgical-menu" class="surgical-menu-trigger" title="Toggle Surgical Control Deck">
+          <span class="icon">⚡</span>
+          <span class="label">SURGICAL DECK</span>
+          <div id="active-indicators" class="active-indicators">
+            <span id="dot-zapper" class="status-dot cyan" title="Zapper Active" style="display:none;"></span>
+            <span id="dot-frozen" class="status-dot red" title="JS Frozen" style="display:none;"></span>
+            <span id="dot-bot" class="status-dot green" title="Googlebot Active" style="display:none;"></span>
+          </div>
+          <span id="deck-arrow" class="arrow">▾</span>
+        </button>
+      </div>
+
+      <!-- Integrated Expandable Surgical Control Strip (Push-down layout immune to occlusion) -->
+      <div id="surgical-deck-panel" class="surgical-panel">
+        <div class="panel-section">
+          <span class="panel-section-title">DOM & Runtime</span>
+          <div class="panel-btn-group">
+            <button id="menu-item-zapper" class="panel-btn" title="Ctrl+Shift+Z">
+              <span class="icon">⚡</span> Multi-Zap
+            </button>
+            <button id="menu-item-unlock" class="panel-btn" title="Ctrl+Shift+U">
+              <span class="icon">🔓</span> Unlock Scroll
+            </button>
+            <button id="menu-item-freeze" class="panel-btn" title="Ctrl+Shift+F">
+              <span class="icon">🛑</span> Freeze JS
+            </button>
+            <button id="menu-item-bot" class="panel-btn" title="Spoof Googlebot">
+              <span class="icon">🕵️</span> Googlebot
+            </button>
+            <button id="menu-item-dark" class="panel-btn" title="Ctrl+Shift+D">
+              <span class="icon">🌙</span> Force Dark
+            </button>
+          </div>
+        </div>
+
+        <div class="panel-divider"></div>
+
+        <div class="panel-section">
+          <span class="panel-section-title">Vaults & Tools</span>
+          <div class="panel-btn-group">
+            <button id="menu-item-media" class="panel-btn" title="Ctrl+Shift+M">
+              <span class="icon">🎥</span> Live Media
+              <span id="media-stream-badge" class="badge">0</span>
+            </button>
+            <button id="menu-item-downloads" class="panel-btn" title="Ctrl+J">
+              <span class="icon">⬇</span> Downloads
+            </button>
+            <button id="menu-item-rules" class="panel-btn">
+              <span class="icon">📜</span> Rules Vault
+              <span id="menu-rule-badge" class="badge">0</span>
+            </button>
+            <button id="menu-item-history" class="panel-btn" title="Ctrl+H">
+              <span class="icon">🕒</span> History
+            </button>
+            <button id="menu-item-settings" class="panel-btn" title="Settings">
+              <span class="icon">⚙️</span> Settings
+            </button>
+            <button id="menu-item-devtools" class="panel-btn" title="F12">
+              <span class="icon">🛠️</span> DevTools
+            </button>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <!-- Floating Find-in-Page Bar -->
+    <div id="find-in-page-bar" class="find-bar">
+      <input type="text" id="find-input" placeholder="Find in page...">
+      <span id="find-matches" class="find-matches">0/0</span>
+      <button id="btn-find-prev" class="find-btn" title="Previous match (Shift+Enter)">▲</button>
+      <button id="btn-find-next" class="find-btn" title="Next match (Enter)">▼</button>
+      <button id="btn-find-close" class="find-btn" title="Close (Escape)">✕</button>
+    </div>
+
+    <!-- Toast Notification Feedback -->
+    <div id="toast" class="toast">
+      <span id="toast-icon">⚡</span>
+      <span id="toast-message">Message</span>
+    </div>
+
+    <!-- Settings Slide-Out Drawer -->
+    <aside id="settings-drawer" class="drawer">
+      <div class="drawer-header">
+        <div class="drawer-title">
+          <h3>⚙️ BROWSER SETTINGS</h3>
+          <span class="domain-tag">Preferences & Privacy</span>
+        </div>
+        <button id="btn-close-settings-drawer" class="btn-icon">✕</button>
+      </div>
+      <div class="drawer-body">
+        <!-- History Logging Toggle Section -->
+        <div class="drawer-section">
+          <h4>Privacy & History Tracking</h4>
+          <div class="setting-card">
+            <div class="setting-info">
+              <span class="setting-title">Record Browsing History</span>
+              <span class="setting-desc">When disabled, URLs and page titles are never logged to history.json.</span>
+            </div>
+            <label class="toggle-switch">
+              <input type="checkbox" id="toggle-history-logging" checked>
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
+        </div>
+
+        <!-- Download Directory Section -->
+        <div class="drawer-section">
+          <h4>Download Directory</h4>
+          <div class="download-dir-card">
+            <span id="settings-download-dir" class="dir-path-text">Loading folder...</span>
+            <div class="dir-btn-group">
+              <button id="btn-settings-change-dir" class="btn-action-sm">📂 Change Folder</button>
+              <button id="btn-settings-reset-dir" class="btn-danger-sm" title="Reset to default Downloads">↺ Default</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Privacy Architecture Summary -->
+        <div class="drawer-section">
+          <h4>Zero-Telemetry Status</h4>
+          <div class="setting-card-static">
+            <div class="status-row"><span class="status-indicator-green">●</span> Host Telemetry: <strong>Disabled</strong></div>
+            <div class="status-row"><span class="status-indicator-green">●</span> Google Sync & Pings: <strong>Disabled</strong></div>
+            <div class="status-row"><span class="status-indicator-green">●</span> Crash Reporter: <strong>Disabled</strong></div>
+            <div class="status-row"><span class="status-indicator-green">●</span> Storage: <strong>Local-Only JSON</strong></div>
+          </div>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Downloads Slide-Out Drawer (Ctrl+J) -->
+    <aside id="downloads-drawer" class="drawer">
+      <div class="drawer-header">
+        <div class="drawer-title">
+          <h3>⬇ DOWNLOADS VAULT</h3>
+          <span class="domain-tag">Zero-Popup Auto-Save</span>
+        </div>
+        <button id="btn-close-downloads-drawer" class="btn-icon">✕</button>
+      </div>
+      <div class="drawer-body">
+        <!-- Custom Directory Selector Section -->
+        <div class="drawer-section">
+          <h4>Save Directory</h4>
+          <div class="download-dir-card">
+            <span id="current-download-dir" class="dir-path-text">Loading folder...</span>
+            <div class="dir-btn-group">
+              <button id="btn-change-download-dir" class="btn-action-sm">📂 Change Folder</button>
+              <button id="btn-reset-download-dir" class="btn-danger-sm" title="Reset to default Downloads">↺ Default</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="section-title-row">
+          <h4>Transfers (<span id="drawer-downloads-count">0</span>)</h4>
+          <button id="btn-clear-completed-downloads" class="btn-danger-sm">Clear Completed</button>
+        </div>
+        <div id="downloads-list" class="downloads-list">
+          <div class="empty-rules">No downloads yet.</div>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Rule Manager Slide-Out Drawer -->
+    <aside id="rules-drawer" class="drawer">
+      <div class="drawer-header">
+        <div class="drawer-title">
+          <h3>⚡ DOM RULE VAULT</h3>
+          <span id="drawer-domain" class="domain-tag">example.com</span>
+        </div>
+        <button id="btn-close-rules-drawer" class="btn-icon">✕</button>
+      </div>
+      <div class="drawer-body">
+        <div class="drawer-section">
+          <h4>Custom CSS / Selector Rule</h4>
+          <div class="add-rule-row">
+            <input type="text" id="custom-selector-input" placeholder="#overlay-modal, .paywall-gate">
+            <button id="btn-add-custom-rule" class="btn-primary">Add Rule</button>
+          </div>
+        </div>
+        <div class="drawer-section">
+          <div class="section-title-row">
+            <h4>Active Zapped Rules (<span id="drawer-rule-count">0</span>)</h4>
+            <button id="btn-purge-domain-rules" class="btn-danger-sm">Purge All</button>
+          </div>
+          <div id="rules-list" class="rules-list">
+            <div class="empty-rules">No persistent rules for this domain yet.</div>
+          </div>
+        </div>
+      </div>
+    </aside>
+
+    <!-- History Slide-Out Drawer -->
+    <aside id="history-drawer" class="drawer">
+      <div class="drawer-header">
+        <div class="drawer-title">
+          <h3>🕒 BROWSING HISTORY</h3>
+          <span id="history-status-tag" class="domain-tag">Local Vault</span>
+        </div>
+        <button id="btn-close-history-drawer" class="btn-icon">✕</button>
+      </div>
+      <div class="drawer-body">
+        <div class="drawer-section">
+          <div class="search-history-row">
+            <input type="text" id="history-search-input" placeholder="Search history...">
+            <button id="btn-purge-all-history" class="btn-danger-sm">Purge All</button>
+          </div>
+        </div>
+        <div id="history-list" class="history-list">
+          <div class="empty-rules">No history recorded yet.</div>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Media Stream Sniffer Slide-Out Drawer -->
+    <aside id="media-drawer" class="drawer">
+      <div class="drawer-header">
+        <div class="drawer-title">
+          <h3>🎥 MEDIA STREAM SNIFFER</h3>
+          <span class="domain-tag">Captured Direct Streams</span>
+        </div>
+        <button id="btn-close-media-drawer" class="btn-icon">✕</button>
+      </div>
+      <div class="drawer-body">
+        <div id="media-list" class="media-list">
+          <div class="empty-rules">No audio/video streams captured yet on this page.</div>
+        </div>
+      </div>
+    </aside>
+
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

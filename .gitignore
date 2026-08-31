@@ -1,0 +1,36 @@
+# Node
+node_modules/
+npm-debug.log*
+yarn-error.log
+
+# Electron build output
+dist/
+out/
+
+# OS files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Editor / IDE
+.vscode/
+.idea/
+*.suo
+*.user
+
+# Backup snapshots (keep source, not snapshots)
+backup_pre_final/
+backup*/
+
+# Local data vaults & rules (generated at runtime, private & user-specific)
+rules.json
+history.json
+bookmarks.json
+settings.json
+
+# Electron cache
+.electron/
+
+# Logs
+*.log
+logs/

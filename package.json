@@ -1,0 +1,91 @@
+{
+  "name": "brwsr",
+  "version": "1.0.0",
+  "description": "Standalone Surgical DOM & Bypass Browser",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "build": "electron-builder",
+    "build:win": "electron-builder --win",
+    "build:linux": "electron-builder --linux",
+    "build:mac": "electron-builder --mac"
+  },
+  "keywords": [
+    "browser",
+    "dom",
+    "bypass",
+    "scraper",
+    "userscript",
+    "cdp"
+  ],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "electron": "^33.2.0",
+    "electron-builder": "^25.1.8"
+  },
+  "build": {
+    "appId": "com.brwsr.surgicalbrowser",
+    "productName": "BRWSR",
+    "copyright": "Copyright © 2026",
+    "asar": true,
+    "asarUnpack": [
+      "node_modules/electron/**"
+    ],
+    "files": [
+      "main.js",
+      "preload.js",
+      "page-preload.js",
+      "src/**/*",
+      "rules.json",
+      "history.json",
+      "bookmarks.json",
+      "settings.json"
+    ],
+    "extraResources": [],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        },
+        {
+          "target": "portable",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "assets/icon.ico",
+      "requestedExecutionLevel": "asInvoker"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "allowElevation": true,
+      "installerIcon": "assets/icon.ico",
+      "uninstallerIcon": "assets/icon.ico",
+      "installerHeaderIcon": "assets/icon.ico",
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "BRWSR"
+    },
+    "portable": {
+      "artifactName": "BRWSR-Portable-${version}.exe"
+    },
+    "linux": {
+      "target": [
+        "AppImage",
+        "deb"
+      ],
+      "icon": "assets/icon.png",
+      "category": "Network"
+    },
+    "directories": {
+      "output": "dist",
+      "buildResources": "assets"
+    }
+  }
+}
