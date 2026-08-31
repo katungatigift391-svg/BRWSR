@@ -11,7 +11,7 @@
 </head>
 <body>
   <div id="browser-shell">
-    <!-- Top Chrome Layer (Hidden automatically during True Fullscreen Videos) -->
+    <!-- Top Chrome Layer (Auto-hidden on True Fullscreen Videos) -->
     <header id="chrome-header">
       <!-- Tabs Strip -->
       <div id="tabs-strip">
@@ -147,11 +147,29 @@
       <div class="drawer-header">
         <div class="drawer-title">
           <h3>⚙️ BROWSER SETTINGS</h3>
-          <span class="domain-tag">Preferences & Privacy</span>
+          <span class="domain-tag">Preferences & Updates</span>
         </div>
         <button id="btn-close-settings-drawer" class="btn-icon">✕</button>
       </div>
       <div class="drawer-body">
+        <!-- In-App Software Updates Section -->
+        <div class="drawer-section">
+          <h4>Software Updates</h4>
+          <div class="setting-card-static">
+            <div class="update-info-row">
+              <span>Installed: <strong id="app-current-version">v1.0.0</strong></span>
+              <span id="update-status-badge" class="badge">Up to date</span>
+            </div>
+            <div id="update-details-box" class="update-details" style="display:none;">
+              <span id="update-latest-version-text" class="update-version-title">🚀 New Update Available!</span>
+              <button id="btn-download-update" class="btn-primary">⬇ Download Update</button>
+            </div>
+            <div class="update-actions-row">
+              <button id="btn-check-updates" class="btn-action-sm">🔄 Check for Updates</button>
+            </div>
+          </div>
+        </div>
+
         <!-- History Logging Toggle Section -->
         <div class="drawer-section">
           <h4>Privacy & History Tracking</h4>

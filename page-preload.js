@@ -402,7 +402,11 @@ const { ipcRenderer } = require('electron');
     dlBtn.addEventListener('click', (e) => {
       e.stopPropagation();
       if (activeHoveredMedia) {
-        const src = activeHoveredMedia.currentSrc || activeHoveredMedia.src;
+        let src = activeHoveredMedia.currentSrc || activeHoveredMedia.src;
+        const isYouTube = window.location.hostname.includes('youtube.com') || window.location.hostname.includes('youtu.be');
+        if (isYouTube || !src || src.startsWith('blob:') || src.includes('googlevideo.com')) {
+          src = window.location.href;
+        }
         if (src) {
           // Route through yt-dlp for site URLs, native download for direct streams
           ipcRenderer.invoke('downloads:ytdlp', src);

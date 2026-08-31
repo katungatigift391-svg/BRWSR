@@ -34,3 +34,6 @@ settings.json
 # Logs
 *.log
 logs/
+
+# Binaries
+assets/bin/

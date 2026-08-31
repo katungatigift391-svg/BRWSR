@@ -784,29 +784,86 @@ ipcMain.handle('downloads:clear', () => {
   return true;
 });
 
-// yt-dlp Integration
+// yt-dlp Integration & Binary Resolver
 function getYtdlpPath() {
   const binName = process.platform === 'win32' ? 'yt-dlp.exe' : 'yt-dlp';
-  if (app.isPackaged) {
-    return path.join(process.resourcesPath, 'bin', binName);
+  const candidates = [
+    path.join(__dirname, 'assets', 'bin', binName),
+    path.join(app.getPath('userData'), 'bin', binName)
+  ];
+  if (app.isPackaged && process.resourcesPath) {
+    candidates.unshift(path.join(process.resourcesPath, 'bin', binName));
   }
-  return path.join(__dirname, 'assets', 'bin', binName);
+  for (const p of candidates) {
+    if (fs.existsSync(p)) return p;
+  }
+  return candidates[0];
+}
+
+async function ensureYtdlpBinary() {
+  const binPath = getYtdlpPath();
+  if (fs.existsSync(binPath)) return binPath;
+
+  const binDir = path.dirname(binPath);
+  if (!fs.existsSync(binDir)) {
+    fs.mkdirSync(binDir, { recursive: true });
+  }
+
+  const downloadUrl = process.platform === 'win32'
+    ? 'https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp.exe'
+    : 'https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp';
+
+  try {
+    const res = await net.fetch(downloadUrl);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const buffer = Buffer.from(await res.arrayBuffer());
+    fs.writeFileSync(binPath, buffer, { mode: 0o755 });
+    return binPath;
+  } catch (err) {
+    console.error('Failed to auto-download yt-dlp binary:', err);
+    return null;
+  }
 }
 
 function isDirectMediaUrl(url) {
+  if (!url) return false;
   return /\.(mp4|webm|mkv|avi|mov|m3u8|mpd|ts|mp3|ogg|flac|wav|aac)(\?|$)/i.test(url);
 }
 
-ipcMain.handle('downloads:ytdlp', async (e, url) => {
-  if (!url) return { success: false, error: 'No URL' };
+ipcMain.handle('downloads:ytdlp', async (e, inputUrl) => {
+  if (!inputUrl) return { success: false, error: 'No URL' };
 
-  const ytdlpBin = getYtdlpPath();
-  const hasYtdlp = fs.existsSync(ytdlpBin);
+  let targetUrl = inputUrl;
 
-  // Fallback: direct media URLs use native Electron download
-  if (!hasYtdlp || isDirectMediaUrl(url)) {
-    if (mainWindow) mainWindow.webContents.downloadURL(url);
+  // Resolve blob / chunk / googlevideo URLs to active tab's real webpage URL
+  if (targetUrl.startsWith('blob:') || targetUrl.includes('googlevideo.com') || targetUrl.includes('youtube.com/videoplayback')) {
+    if (activeTabId && tabs.has(activeTabId)) {
+      const activeTab = tabs.get(activeTabId);
+      if (activeTab && activeTab.url && activeTab.url.startsWith('http')) {
+        targetUrl = activeTab.url;
+      }
+    }
+  }
+
+  const isYouTube = targetUrl.includes('youtube.com/') || targetUrl.includes('youtu.be/');
+  const isDirect = isDirectMediaUrl(targetUrl);
+
+  // If direct stream and NOT a site like YouTube, use native Electron downloader
+  if (isDirect && !isYouTube) {
+    if (mainWindow) mainWindow.webContents.downloadURL(targetUrl);
     return { success: true, method: 'native' };
+  }
+
+  // Ensure yt-dlp binary is available
+  let ytdlpBin = getYtdlpPath();
+  if (!fs.existsSync(ytdlpBin)) {
+    ytdlpBin = await ensureYtdlpBinary();
+  }
+
+  if (!ytdlpBin || !fs.existsSync(ytdlpBin)) {
+    // Ultimate fallback if yt-dlp download failed
+    if (mainWindow) mainWindow.webContents.downloadURL(targetUrl);
+    return { success: true, method: 'native-fallback' };
   }
 
   const downloadDir = (settingsData.downloadDir && fs.existsSync(settingsData.downloadDir))
@@ -816,9 +873,9 @@ ipcMain.handle('downloads:ytdlp', async (e, url) => {
   const downloadId = 'ytdl_' + Date.now();
   const entry = {
     id: downloadId,
-    filename: 'Fetching title...',
+    filename: isYouTube ? 'Fetching YouTube Video...' : 'Fetching Stream Title...',
     savePath: downloadDir,
-    url,
+    url: targetUrl,
     state: 'progressing',
     percent: 0,
     receivedBytes: 0,
@@ -836,52 +893,84 @@ ipcMain.handle('downloads:ytdlp', async (e, url) => {
     '--no-playlist',
     '--newline',
     '--progress',
-    '--format', 'bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best',
-    '--merge-output-format', 'mp4',
+    '--no-warnings',
+    '--no-check-certificates',
+    '--concurrent-fragments', '4',
+    '-f', 'best[ext=mp4]/bestvideo[ext=mp4]+bestaudio[ext=m4a]/bestvideo+bestaudio/best',
     '--output', path.join(downloadDir, '%(title)s.%(ext)s'),
-    url
+    targetUrl
   ];
 
-  const proc = spawn(ytdlpBin, args, { windowsHide: true });
-  activeDownloadItems.set(downloadId, { cancel: () => proc.kill('SIGTERM') });
+  try {
+    const proc = spawn(ytdlpBin, args, { windowsHide: true });
+    activeDownloadItems.set(downloadId, { cancel: () => proc.kill('SIGTERM') });
 
-  proc.stdout.on('data', (chunk) => {
-    const line = chunk.toString();
-    // Parse [download] XX% line
-    const pctMatch = line.match(/\[download\]\s+(\d+\.?\d*)%/);
-    if (pctMatch) {
-      entry.percent = parseFloat(pctMatch[1]);
-    }
-    // Parse speed
-    const spdMatch = line.match(/at\s+([\d.]+[KMG]iB\/s)/);
-    if (spdMatch) entry.speed = spdMatch[1];
-    // Parse ETA / title
-    const destMatch = line.match(/\[download\] Destination: (.+)/);
-    if (destMatch) {
-      entry.filename = path.basename(destMatch[1].trim());
-      entry.savePath = destMatch[1].trim();
-    }
-    notify(mainWindow);
-  });
+    proc.stdout.on('data', (chunk) => {
+      const text = chunk.toString();
+      const lines = text.split(/[\r\n]+/);
 
-  proc.stderr.on('data', (chunk) => {
-    const line = chunk.toString();
-    console.error('[yt-dlp stderr]', line.trim());
-  });
+      for (const line of lines) {
+        if (!line) continue;
 
-  proc.on('close', (code) => {
-    activeDownloadItems.delete(downloadId);
-    entry.state = code === 0 ? 'completed' : 'interrupted';
-    entry.percent = code === 0 ? 100 : entry.percent;
-    if (mainWindow) {
-      mainWindow.webContents.send('downloads:completed', { ...entry });
-    }
-  });
+        // Progress: [download]  45.2% of ~120.00MiB at 4.50MiB/s ETA 00:15
+        const pctMatch = line.match(/\[download\]\s+([\d.]+)%/);
+        if (pctMatch) {
+          entry.percent = Math.min(99.9, parseFloat(pctMatch[1]));
+        }
 
-  return { success: true, method: 'ytdlp', id: downloadId };
+        const spdMatch = line.match(/at\s+([\d.]+[KMG]iB\/s)/);
+        const etaMatch = line.match(/ETA\s+([\d:]+)/);
+        if (spdMatch && etaMatch) {
+          entry.speed = `${spdMatch[1]} (ETA ${etaMatch[1]})`;
+        } else if (spdMatch) {
+          entry.speed = spdMatch[1];
+        }
+
+        // Title / Destination
+        const destMatch = line.match(/\[download\] Destination: (.+)/) || line.match(/\[download\] (.+) has already been downloaded/);
+        if (destMatch) {
+          entry.filename = path.basename(destMatch[1].trim());
+          entry.savePath = destMatch[1].trim();
+        }
+
+        const mergeMatch = line.match(/\[Merger\] Merging formats into "(.+)"/);
+        if (mergeMatch) {
+          entry.filename = path.basename(mergeMatch[1].trim());
+          entry.savePath = mergeMatch[1].trim();
+        }
+      }
+
+      notify(mainWindow);
+    });
+
+    proc.stderr.on('data', (chunk) => {
+      const line = chunk.toString().trim();
+      if (line) console.error('[yt-dlp]', line);
+    });
+
+    proc.on('close', (code) => {
+      activeDownloadItems.delete(downloadId);
+      entry.state = code === 0 ? 'completed' : 'interrupted';
+      entry.percent = code === 0 ? 100 : entry.percent;
+      if (code === 0 && entry.filename.startsWith('Fetching')) {
+        entry.filename = 'Video Download Complete.mp4';
+      }
+      if (mainWindow) {
+        mainWindow.webContents.send('downloads:completed', { ...entry });
+      }
+    });
+
+    return { success: true, method: 'ytdlp', id: downloadId };
+  } catch (err) {
+    console.error('Failed to spawn yt-dlp:', err);
+    entry.state = 'interrupted';
+    if (mainWindow) mainWindow.webContents.send('downloads:completed', { ...entry });
+    return { success: false, error: err.message };
+  }
 });
 
 ipcMain.handle('downloads:ytdlp-available', () => fs.existsSync(getYtdlpPath()));
+
 
 
 // Media Sniffer

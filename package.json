@@ -42,7 +42,13 @@
       "bookmarks.json",
       "settings.json"
     ],
-    "extraResources": [],
+    "extraResources": [
+      {
+        "from": "assets/bin",
+        "to": "bin",
+        "filter": ["**/*"]
+      }
+    ],
     "win": {
       "target": [
         {
