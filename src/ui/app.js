@@ -18,6 +18,7 @@
   let isDeckOpen = false;
   let isFullscreen = false;
   let historyLoggingEnabled = true;
+  let latestReleaseUrl = 'https://github.com/katungatigift391-svg/BRWSR/releases';
 
   // DOM Elements
   const chromeHeader = document.getElementById('chrome-header');
@@ -75,6 +76,14 @@
   const settingsDownloadDir = document.getElementById('settings-download-dir');
   const btnSettingsChangeDir = document.getElementById('btn-settings-change-dir');
   const btnSettingsResetDir = document.getElementById('btn-settings-reset-dir');
+
+  // Software Update UI Elements
+  const appCurrentVersion = document.getElementById('app-current-version');
+  const updateStatusBadge = document.getElementById('update-status-badge');
+  const updateDetailsBox = document.getElementById('update-details-box');
+  const updateLatestVersionText = document.getElementById('update-latest-version-text');
+  const btnDownloadUpdate = document.getElementById('btn-download-update');
+  const btnCheckUpdates = document.getElementById('btn-check-updates');
 
   // Downloads Drawer
   const downloadsDrawer = document.getElementById('downloads-drawer');
@@ -183,6 +192,11 @@
       if (settingsDownloadDir) {
         settingsDownloadDir.textContent = s.downloadDir + (s.isCustomDir ? ' (Custom)' : ' (Default)');
       }
+
+      const ver = await api.getVersion();
+      if (appCurrentVersion) {
+        appCurrentVersion.textContent = `v${ver}`;
+      }
     } catch (e) {}
   }
 
@@ -222,11 +236,55 @@
     showToast('↺', 'Reset download folder to default');
   });
 
+  /* -------------------------------------------------------------------------- */
+  /* In-App Update Checker Engine                                               */
+  /* -------------------------------------------------------------------------- */
+
+  async function checkForUpdates(manual = false) {
+    if (updateStatusBadge) updateStatusBadge.textContent = 'Checking...';
+    try {
+      const res = await api.checkUpdates();
+      if (res.hasUpdate) {
+        latestReleaseUrl = res.releaseUrl || 'https://github.com/katungatigift391-svg/BRWSR/releases/latest';
+        if (updateStatusBadge) {
+          updateStatusBadge.textContent = `Update available: ${res.latestVersion}`;
+          updateStatusBadge.style.color = 'var(--accent-green)';
+        }
+        if (updateDetailsBox) {
+          updateDetailsBox.style.display = 'flex';
+          updateLatestVersionText.textContent = `🚀 Update Available: ${res.latestVersion}`;
+        }
+        if (manual) {
+          showToast('🚀', `New release available: ${res.latestVersion}!`, 4000);
+        }
+      } else {
+        if (updateStatusBadge) {
+          updateStatusBadge.textContent = 'Up to date';
+          updateStatusBadge.style.color = 'var(--accent-cyan)';
+        }
+        if (updateDetailsBox) updateDetailsBox.style.display = 'none';
+        if (manual) {
+          showToast('✅', `BRWSR v${res.currentVersion} is up to date!`);
+        }
+      }
+    } catch (err) {
+      if (updateStatusBadge) updateStatusBadge.textContent = 'Check failed';
+      if (manual) showToast('⚠️', 'Could not connect to update server');
+    }
+  }
+
+  btnCheckUpdates.addEventListener('click', () => checkForUpdates(true));
+
+  btnDownloadUpdate.addEventListener('click', () => {
+    api.openExternalUrl(latestReleaseUrl);
+  });
+
   menuItemSettings.addEventListener('click', () => {
     closeAllDrawers();
     settingsDrawer.classList.add('open');
     updateViewOffsets(true);
     loadSettings();
+    checkForUpdates(false);
   });
 
   btnCloseSettingsDrawer.addEventListener('click', () => closeAllDrawers());
@@ -978,6 +1036,7 @@
       api.createTab('https://duckduckgo.com');
     }
     loadSettings();
+    setTimeout(() => checkForUpdates(false), 2000);
   }, 100);
 
 })();

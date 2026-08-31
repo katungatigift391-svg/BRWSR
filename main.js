@@ -1,6 +1,9 @@
-const { app, BrowserWindow, WebContentsView, BrowserView, session, ipcMain, shell, dialog } = require('electron');
+const { app, BrowserWindow, WebContentsView, BrowserView, session, ipcMain, shell, dialog, Menu, net } = require('electron');
 const path = require('path');
 const fs = require('fs');
+
+// Remove default Electron menu bar (File, Edit, View, Window, Help)
+Menu.setApplicationMenu(null);
 
 /* -------------------------------------------------------------------------- */
 /* 1. Privacy & Anti-Telemetry Hardening (Zero Host Telemetry)                */
@@ -72,9 +75,7 @@ function saveSettings() {
 }
 
 function recordHistory(url, title) {
-  // If user disabled history logging in Settings, skip immediately
   if (!settingsData.historyLogging) return;
-
   if (!url || url.startsWith('about:') || url.startsWith('chrome-extension:') || url.startsWith('devtools:')) return;
   if (historyData.length > 0 && historyData[0].url === url) {
     historyData[0].title = title || historyData[0].title;
@@ -108,6 +109,7 @@ function createMainWindow() {
     minHeight: 500,
     backgroundColor: '#070a11',
     title: 'BRWSR // Surgical Browser',
+    autoHideMenuBar: true,
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       contextIsolation: true,
@@ -116,6 +118,7 @@ function createMainWindow() {
     }
   });
 
+  mainWindow.setMenu(null);
   mainWindow.loadFile(path.join(__dirname, 'src', 'ui', 'index.html'));
 
   mainWindow.on('resize', () => {
@@ -148,7 +151,6 @@ function updateActiveViewBounds() {
 
   const [width, height] = mainWindow.getContentSize();
 
-  // If active tab is in true fullscreen, make view occupy the entire window with 0 offset
   if (tab.isFullscreen || (mainWindow.isFullScreen && mainWindow.isFullScreen())) {
     if (tab.view.setBounds) {
       tab.view.setBounds({ x: 0, y: 0, width: width, height: height });
@@ -218,7 +220,6 @@ function createTab(initialUrl = 'https://duckduckgo.com') {
   tabs.set(tabId, tabData);
   const wc = view.webContents;
 
-  // True Fullscreen HTML5 Video Event Interceptors
   wc.on('enter-html-full-screen', () => {
     tabData.isFullscreen = true;
     if (mainWindow) {
@@ -435,7 +436,6 @@ function setupNetworkInterceptors() {
     }
   });
 
-  // Seamless Auto-Downloading to Custom or Default Directory
   customSession.on('will-download', (event, item, webContents) => {
     const downloadsDir = (settingsData.downloadDir && fs.existsSync(settingsData.downloadDir))
       ? settingsData.downloadDir
@@ -533,6 +533,47 @@ ipcMain.handle('window:toggle-fullscreen', () => {
     return nextState;
   }
   return false;
+});
+
+// In-App GitHub Release Update Checker
+ipcMain.handle('app:get-version', () => app.getVersion());
+
+ipcMain.handle('app:check-updates', async () => {
+  const currentVersion = app.getVersion();
+  try {
+    const response = await net.fetch('https://api.github.com/repos/katungatigift391-svg/BRWSR/releases/latest', {
+      headers: {
+        'User-Agent': 'BRWSR-App-Update-Checker',
+        'Accept': 'application/vnd.github.v3+json'
+      }
+    });
+
+    if (!response.ok) {
+      return { hasUpdate: false, currentVersion, error: `GitHub API status ${response.status}` };
+    }
+
+    const data = await response.json();
+    const latestTag = (data.tag_name || '').replace(/^v/i, '');
+    const currentClean = currentVersion.replace(/^v/i, '');
+
+    const isNewer = latestTag && latestTag !== currentClean;
+
+    return {
+      hasUpdate: isNewer,
+      currentVersion,
+      latestVersion: data.tag_name || latestTag,
+      releaseName: data.name || data.tag_name,
+      releaseUrl: data.html_url || 'https://github.com/katungatigift391-svg/BRWSR/releases',
+      releaseNotes: data.body || '',
+      publishedAt: data.published_at
+    };
+  } catch (err) {
+    return { hasUpdate: false, currentVersion, error: err.message };
+  }
+});
+
+ipcMain.handle('app:open-external-url', (e, targetUrl) => {
+  if (targetUrl) shell.openExternal(targetUrl);
 });
 
 // Settings & Custom Download Directory & History Logging Toggle

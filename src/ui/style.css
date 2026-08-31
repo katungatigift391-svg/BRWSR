@@ -716,6 +716,41 @@ html, body {
   line-height: 1.4;
 }
 
+/* Software Updates UI */
+.update-info-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 12px;
+}
+
+.update-info-row strong {
+  font-family: var(--font-mono);
+  color: var(--accent-cyan);
+}
+
+.update-details {
+  background: rgba(6, 182, 212, 0.1);
+  border: 1px solid var(--accent-cyan);
+  border-radius: 6px;
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.update-version-title {
+  font-size: 12px;
+  font-weight: 700;
+  color: #38bdf8;
+}
+
+.update-actions-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
 /* Toggle Switch UI */
 .toggle-switch {
   position: relative;
@@ -825,7 +860,7 @@ input:checked + .toggle-slider:before {
   color: #041019;
   border: none;
   border-radius: 6px;
-  padding: 0 12px;
+  padding: 6px 12px;
   font-size: 11px;
   font-weight: 700;
   cursor: pointer;
@@ -944,7 +979,7 @@ input:checked + .toggle-slider:before {
   border: 1px solid var(--border-subtle);
   color: var(--text-muted);
   font-size: 10px;
-  padding: 3px 8px;
+  padding: 4px 10px;
   border-radius: 4px;
   cursor: pointer;
   transition: all 0.12s ease;
