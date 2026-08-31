@@ -289,7 +289,7 @@
 
   if (btnOpenDiscussions) {
     btnOpenDiscussions.addEventListener('click', () => {
-      api.openExternalUrl('https://github.com/katungatigift391-svg/BRWSR/discussions');
+      api.openExternalUrl('https://github.com/katungatigift391-svg/BRWSR/issues/new?title=[Feature+Idea]+');
     });
   }
 

@@ -91,9 +91,9 @@ The compiled installer and portable executable will be placed in the `dist/` dir
 Since BRWSR is in active pre-release development, your direct feedback helps shape upcoming capabilities and resolve edge cases across different web platforms.
 
 ### 📬 Where to Share Your Feedback:
-* 🐛 **Bug Reports & Broken Sites**: Open a ticket on our **[GitHub Issues](https://github.com/katungatigift391-svg/BRWSR/issues)** tracker with the URL and what happened.
-* 💡 **Feature Requests & Ideas**: Start a discussion on **[GitHub Discussions](https://github.com/katungatigift391-svg/BRWSR/discussions)** or file an Issue labeled `enhancement`.
-* ⚙️ **Direct In-App Feedback**: Open **Settings (`⚙️`)** in the browser toolbar and click **"🐛 Report an Issue"** or **"💡 Feature Ideas"** to be taken directly to the issue tracker.
+* 🐛 **Bug Reports & Broken Sites**: Open a ticket on our **[GitHub Issues Tracker](https://github.com/katungatigift391-svg/BRWSR/issues)** with the URL and what happened.
+* 💡 **Feature Requests & Ideas**: Submit a feature proposal directly via **[GitHub Feature Requests](https://github.com/katungatigift391-svg/BRWSR/issues/new?title=[Feature+Idea]+)**.
+* ⚙️ **Direct In-App Feedback**: Open **Settings (`⚙️`)** in the browser toolbar and click **"🐛 Report an Issue"** or **"💡 Feature Ideas"** to jump directly to the submission page.
 
 ---
 
