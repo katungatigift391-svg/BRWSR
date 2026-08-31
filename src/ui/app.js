@@ -638,10 +638,16 @@
       meta.className = 'dl-meta-row';
 
       const sizeInfo = document.createElement('span');
-      if (d.speed === 'yt-dlp') {
-        sizeInfo.textContent = `yt-dlp stream capture`;
+      if (d.sizeText) {
+        sizeInfo.textContent = `${d.sizeText} ${d.state === 'progressing' && d.speed ? `(${d.speed})` : ''}`;
+      } else if (d.totalBytes > 0) {
+        sizeInfo.textContent = `${formatBytes(d.receivedBytes)} / ${formatBytes(d.totalBytes)} ${d.state === 'progressing' && d.speed ? `(${d.speed})` : ''}`;
+      } else if (d.receivedBytes > 0) {
+        sizeInfo.textContent = `${formatBytes(d.receivedBytes)} ${d.state === 'progressing' && d.speed ? `(${d.speed})` : ''}`;
+      } else if (d.percent > 0) {
+        sizeInfo.textContent = `${d.percent}% ${d.state === 'progressing' && d.speed ? `(${d.speed})` : ''}`;
       } else {
-        sizeInfo.textContent = `${formatBytes(d.receivedBytes)} / ${formatBytes(d.totalBytes)} ${d.state === 'progressing' ? `(${d.speed})` : ''}`;
+        sizeInfo.textContent = d.state === 'progressing' ? (d.speed || 'Downloading...') : d.state;
       }
 
       const actions = document.createElement('div');

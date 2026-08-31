@@ -902,6 +902,7 @@ ipcMain.handle('downloads:ytdlp', async (e, inputUrl) => {
   ];
 
   try {
+    entry.isYtdlp = true;
     const proc = spawn(ytdlpBin, args, { windowsHide: true });
     activeDownloadItems.set(downloadId, { cancel: () => proc.kill('SIGTERM') });
 
@@ -918,12 +919,23 @@ ipcMain.handle('downloads:ytdlp', async (e, inputUrl) => {
           entry.percent = Math.min(99.9, parseFloat(pctMatch[1]));
         }
 
+        const sizeMatch = line.match(/of\s+(~?[\d.]+\s*[KMGTP]?i?B)/i);
+        if (sizeMatch) {
+          entry.totalSizeStr = sizeMatch[1].trim();
+        }
+
         const spdMatch = line.match(/at\s+([\d.]+[KMG]iB\/s)/);
         const etaMatch = line.match(/ETA\s+([\d:]+)/);
         if (spdMatch && etaMatch) {
           entry.speed = `${spdMatch[1]} (ETA ${etaMatch[1]})`;
         } else if (spdMatch) {
           entry.speed = spdMatch[1];
+        }
+
+        if (entry.totalSizeStr) {
+          entry.sizeText = `${entry.percent.toFixed(1)}% of ${entry.totalSizeStr}`;
+        } else if (entry.percent > 0) {
+          entry.sizeText = `${entry.percent.toFixed(1)}%`;
         }
 
         // Title / Destination
