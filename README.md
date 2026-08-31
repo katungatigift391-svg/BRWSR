@@ -15,7 +15,7 @@
 
 ## ⚡ What is BRWSR?
 
-**BRWSR** is a high-performance desktop browser engineered for developers, power users, and privacy purists. Built from the ground up on **Electron**, **Chromium**, and the **Chrome DevTools Protocol (CDP)**, BRWSR gives you total, uninterrupted control over the web runtime — bypass aggressive modal blockers, vaporize intrusive overlays with persistent rules, intercept live video streams with 1-click downloads, and enjoy zero telemetry logging.
+**BRWSR** is a high-performance desktop browser engineered for developers, power users, and privacy purists. Built from the ground up on **Electron**, **Chromium**, and the **Chrome DevTools Protocol (CDP)**, BRWSR gives you total, uninterrupted control over the web runtime — bypass aggressive modal blockers, vaporize intrusive overlays with persistent rules, intercept live video streams with 1-click downloads via **yt-dlp**, and enjoy zero telemetry logging.
 
 ---
 
@@ -62,13 +62,13 @@ The compiled installer and portable executable will be placed in the `dist/` dir
 ## ⚡ Key Capabilities
 
 * **⚡ Continuous Multi-Zap Engine (`Ctrl+Shift+Z`)**  
-  Vaporize persistent popups, consent walls, sticky banners, and obstruction layers in rapid succession with a single click. Rules are automatically parsed and saved to local memory.
+  Vaporize persistent popups, consent walls, sticky banners, and obstruction layers in rapid succession. All underlying page clicks, links, and mouse events are strictly suppressed while targeting. Rules are automatically parsed and saved to local memory.
 
-* **🎥 Dynamic Media Sniffer & 1-Click Downloader**  
-  A pulsing smart indicator illuminates directly next to the URL bar whenever video, audio, or HLS streams are detected on the page. Download direct streams with 1 click without popup dialogues.
+* **🎥 yt-dlp & Dynamic Media Sniffer Integration (`Ctrl+Shift+M`)**  
+  A pulsing smart indicator illuminates directly next to the URL bar whenever video, audio, or HLS streams are detected on the page. Download direct streams with 1 click or open the Media Vault drawer to download site streams via **yt-dlp**.
 
-* **🔍 Live In-Page Media Inspector (`Ctrl+Shift+M`)**  
-  Scans all HTML5 `<video>`, `<audio>`, and high-res media elements on the active page, presenting hover-to-preview video cards, dimensions, and batch download options.
+* **🎬 In-Page Video Download Badge**  
+  Hovering over any HTML5 `<video>` or `<audio>` element automatically reveals a 1-click download pill and copy button directly above the player.
 
 * **🛑 V8 JavaScript Runtime Freeze (`Ctrl+Shift+F`)**  
   Pauses the active tab's V8 JavaScript engine via CDP `Debugger.pause`, freezing countdown timers, anti-adblock loops, and paywalls while maintaining full CSS animations and DOM rendering.
@@ -97,7 +97,7 @@ The compiled installer and portable executable will be placed in the `dist/` dir
 | **`Ctrl + J`** | Open **Downloads Vault** drawer |
 | **`Ctrl + H`** | Open **Browsing History** drawer |
 | **`Ctrl + D`** | Bookmark active page |
-| **`Ctrl + Shift + M`** | Open **Live Media Scanner** overlay |
+| **`Ctrl + Shift + M`** | Open **Media Stream Sniffer** drawer |
 | **`Ctrl + Shift + Z`** | Toggle **Continuous Multi-Zap Mode** |
 | **`Ctrl + Shift + U`** | **Unlock Scroll** & purge modal backdrops |
 | **`Ctrl + Shift + F`** | **Freeze / Resume JavaScript** Execution |

@@ -394,7 +394,7 @@
   }
 
   /* -------------------------------------------------------------------------- */
-  /* Dynamic Media Download Button Action                                       */
+  /* Dynamic Media Download Button Action (yt-dlp Integrated)                  */
   /* -------------------------------------------------------------------------- */
 
   btnDynamicMedia.addEventListener('click', async () => {
@@ -403,10 +403,13 @@
     const streams = tab?.mediaStreams || [];
 
     if (streams.length === 1) {
-      api.downloadUrl(streams[0]);
-      showToast('⬇', 'Downloading detected video stream...');
+      api.downloadYtdlp(streams[0]);
+      showToast('⬇', 'Queued download via yt-dlp...');
     } else {
-      await api.toggleLiveMediaScanner(activeTabId);
+      closeAllDrawers();
+      mediaDrawer.classList.add('open');
+      updateViewOffsets(true);
+      renderMediaDrawerList();
     }
   });
 
@@ -454,10 +457,11 @@
     showToast('🌙', res.isDark ? 'Force Dark Mode ENABLED' : 'Force Dark Mode Disabled');
   });
 
-  menuItemMedia.addEventListener('click', async () => {
-    if (activeTabId) {
-      await api.toggleLiveMediaScanner(activeTabId);
-    }
+  menuItemMedia.addEventListener('click', () => {
+    closeAllDrawers();
+    mediaDrawer.classList.add('open');
+    updateViewOffsets(true);
+    renderMediaDrawerList();
   });
 
   menuItemDownloads.addEventListener('click', () => {
@@ -485,6 +489,75 @@
   menuItemDevTools.addEventListener('click', () => {
     if (activeTabId) api.toggleDevTools(activeTabId);
   });
+
+  /* -------------------------------------------------------------------------- */
+  /* Media Streams Drawer (yt-dlp Integrated)                                   */
+  /* -------------------------------------------------------------------------- */
+
+  function renderMediaDrawerList() {
+    mediaList.innerHTML = '';
+    const activeTab = tabs.find(t => t.id === activeTabId);
+    const streams = activeTab?.mediaStreams || [];
+
+    if (streams.length === 0) {
+      const pageUrl = activeTab?.url;
+      if (pageUrl && pageUrl.startsWith('http')) {
+        const directCard = document.createElement('div');
+        directCard.className = 'media-item';
+        const urlSpan = document.createElement('span');
+        urlSpan.className = 'media-url';
+        urlSpan.textContent = pageUrl;
+        urlSpan.title = pageUrl;
+
+        const dlBtn = document.createElement('button');
+        dlBtn.className = 'btn-download-sm';
+        dlBtn.textContent = '⬇ Download Page Media (yt-dlp)';
+        dlBtn.addEventListener('click', () => {
+          api.downloadYtdlp(pageUrl);
+          showToast('⬇', 'yt-dlp: Queued download for page media...');
+        });
+
+        directCard.appendChild(urlSpan);
+        directCard.appendChild(dlBtn);
+        mediaList.appendChild(directCard);
+        return;
+      }
+
+      mediaList.innerHTML = '<div class="empty-rules">No direct audio/video streams captured yet on this page.</div>';
+      return;
+    }
+
+    streams.forEach(streamUrl => {
+      const item = document.createElement('div');
+      item.className = 'media-item';
+
+      const urlSpan = document.createElement('span');
+      urlSpan.className = 'media-url';
+      urlSpan.textContent = streamUrl;
+      urlSpan.title = streamUrl;
+
+      const copyBtn = document.createElement('button');
+      copyBtn.className = 'btn-copy-sm';
+      copyBtn.textContent = '📋 Copy';
+      copyBtn.addEventListener('click', () => {
+        navigator.clipboard.writeText(streamUrl);
+        showToast('📋', 'Copied media URL to clipboard');
+      });
+
+      const dlBtn = document.createElement('button');
+      dlBtn.className = 'btn-download-sm';
+      dlBtn.textContent = '⬇ Download';
+      dlBtn.addEventListener('click', () => {
+        api.downloadYtdlp(streamUrl);
+        showToast('⬇', 'Queued download via yt-dlp...');
+      });
+
+      item.appendChild(urlSpan);
+      item.appendChild(copyBtn);
+      item.appendChild(dlBtn);
+      mediaList.appendChild(item);
+    });
+  }
 
   /* -------------------------------------------------------------------------- */
   /* Downloads Engine & Custom Folder                                           */
@@ -565,7 +638,11 @@
       meta.className = 'dl-meta-row';
 
       const sizeInfo = document.createElement('span');
-      sizeInfo.textContent = `${formatBytes(d.receivedBytes)} / ${formatBytes(d.totalBytes)} ${d.state === 'progressing' ? `(${d.speed})` : ''}`;
+      if (d.speed === 'yt-dlp') {
+        sizeInfo.textContent = `yt-dlp stream capture`;
+      } else {
+        sizeInfo.textContent = `${formatBytes(d.receivedBytes)} / ${formatBytes(d.totalBytes)} ${d.state === 'progressing' ? `(${d.speed})` : ''}`;
+      }
 
       const actions = document.createElement('div');
       actions.className = 'dl-actions';
@@ -945,7 +1022,10 @@
       fetchDownloads();
     } else if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 'm') {
       e.preventDefault();
-      if (activeTabId) api.toggleLiveMediaScanner(activeTabId);
+      closeAllDrawers();
+      mediaDrawer.classList.add('open');
+      updateViewOffsets(true);
+      renderMediaDrawerList();
     } else if (e.ctrlKey && e.key.toLowerCase() === 'd') {
       e.preventDefault();
       btnBookmark.click();
@@ -1028,6 +1108,9 @@
     }
     if (data.tabId === activeTabId) {
       updateActiveTabUI();
+      if (mediaDrawer.classList.contains('open')) {
+        renderMediaDrawerList();
+      }
     }
   });
 

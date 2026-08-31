@@ -236,22 +236,40 @@ const { ipcRenderer } = require('electron');
     }
   }
 
+  // Block all mouse/pointer events while zapper is active so no page handler fires
+  function onZapperBlockAll(e) {
+    if (!zapperActive) return;
+    e.preventDefault();
+    e.stopPropagation();
+    e.stopImmediatePropagation();
+  }
+
   function toggleZapperMode(activate) {
     zapperActive = (activate !== undefined) ? activate : !zapperActive;
 
     if (zapperActive) {
       zappedCount = 0;
       createZapperHUD();
-      document.addEventListener('mousemove', onZapperMouseMove, true);
-      document.addEventListener('click', onZapperClick, true);
-      document.addEventListener('keydown', onZapperKeyDown, true);
+      document.addEventListener('mousemove',   onZapperMouseMove, true);
+      document.addEventListener('click',        onZapperClick,     true);
+      document.addEventListener('mousedown',    onZapperBlockAll,  true);
+      document.addEventListener('mouseup',      onZapperBlockAll,  true);
+      document.addEventListener('pointerdown',  onZapperBlockAll,  true);
+      document.addEventListener('pointerup',    onZapperBlockAll,  true);
+      document.addEventListener('contextmenu',  onZapperBlockAll,  true);
+      document.addEventListener('keydown',      onZapperKeyDown,   true);
       document.documentElement.style.cursor = 'crosshair';
       ipcRenderer.send('action:zapper-state', true);
     } else {
       if (hudElement) hudElement.style.display = 'none';
-      document.removeEventListener('mousemove', onZapperMouseMove, true);
-      document.removeEventListener('click', onZapperClick, true);
-      document.removeEventListener('keydown', onZapperKeyDown, true);
+      document.removeEventListener('mousemove',   onZapperMouseMove, true);
+      document.removeEventListener('click',        onZapperClick,     true);
+      document.removeEventListener('mousedown',    onZapperBlockAll,  true);
+      document.removeEventListener('mouseup',      onZapperBlockAll,  true);
+      document.removeEventListener('pointerdown',  onZapperBlockAll,  true);
+      document.removeEventListener('pointerup',    onZapperBlockAll,  true);
+      document.removeEventListener('contextmenu',  onZapperBlockAll,  true);
+      document.removeEventListener('keydown',      onZapperKeyDown,   true);
       document.documentElement.style.cursor = '';
       hoveredElement = null;
       ipcRenderer.send('action:zapper-state', false);
@@ -386,9 +404,10 @@ const { ipcRenderer } = require('electron');
       if (activeHoveredMedia) {
         const src = activeHoveredMedia.currentSrc || activeHoveredMedia.src;
         if (src) {
-          ipcRenderer.invoke('downloads:download-url', src);
-          dlBtn.textContent = '✓ Starting...';
-          setTimeout(() => { dlBtn.textContent = '⬇ 1-Click Download'; }, 2000);
+          // Route through yt-dlp for site URLs, native download for direct streams
+          ipcRenderer.invoke('downloads:ytdlp', src);
+          dlBtn.textContent = '✓ Queued...';
+          setTimeout(() => { dlBtn.textContent = '⬇ 1-Click Download'; }, 2500);
         }
       }
     });
@@ -451,291 +470,7 @@ const { ipcRenderer } = require('electron');
   });
 
   /* -------------------------------------------------------------------------- */
-  /* 7. Live In-Page Media Scanner Dashboard Overlay                            */
-  /* -------------------------------------------------------------------------- */
-
-  let mediaScannerModal = null;
-
-  function scanAllPageMedia() {
-    const found = [];
-    // 1. Videos
-    document.querySelectorAll('video').forEach(v => {
-      const src = v.currentSrc || v.src;
-      if (src && !found.some(f => f.src === src)) {
-        found.push({
-          type: 'video',
-          src: src,
-          width: v.videoWidth || v.clientWidth,
-          height: v.videoHeight || v.clientHeight,
-          duration: v.duration ? `${Math.round(v.duration)}s` : 'Stream'
-        });
-      }
-      v.querySelectorAll('source').forEach(s => {
-        if (s.src && !found.some(f => f.src === s.src)) {
-          found.push({ type: 'video', src: s.src, duration: 'Source' });
-        }
-      });
-    });
-
-    // 2. Audio
-    document.querySelectorAll('audio').forEach(a => {
-      const src = a.currentSrc || a.src;
-      if (src && !found.some(f => f.src === src)) {
-        found.push({ type: 'audio', src: src, duration: a.duration ? `${Math.round(a.duration)}s` : 'Audio' });
-      }
-    });
-
-    // 3. High-res Images (> 250px)
-    document.querySelectorAll('img').forEach(img => {
-      const src = img.currentSrc || img.src;
-      if (src && (img.naturalWidth > 250 || img.naturalHeight > 250) && !found.some(f => f.src === src)) {
-        found.push({
-          type: 'image',
-          src: src,
-          width: img.naturalWidth,
-          height: img.naturalHeight,
-          duration: `${img.naturalWidth}x${img.naturalHeight}`
-        });
-      }
-    });
-
-    return found;
-  }
-
-  function openLiveMediaScanner() {
-    if (mediaScannerModal) {
-      mediaScannerModal.remove();
-      mediaScannerModal = null;
-    }
-
-    const items = scanAllPageMedia();
-
-    mediaScannerModal = document.createElement('div');
-    mediaScannerModal.id = 'brwsr-live-media-scanner';
-    mediaScannerModal.style.cssText = `
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100vw;
-      height: 100vh;
-      background: rgba(4, 7, 13, 0.88);
-      backdrop-filter: blur(14px);
-      z-index: 2147483647;
-      display: flex;
-      flex-direction: column;
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      box-sizing: border-box;
-      padding: 24px;
-      color: #f1f5f9;
-    `;
-
-    // Header
-    const header = document.createElement('div');
-    header.style.cssText = `
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      border-bottom: 1px solid #1e293b;
-      padding-bottom: 16px;
-      margin-bottom: 20px;
-    `;
-
-    const titleDiv = document.createElement('div');
-    titleDiv.innerHTML = `<h2 style="margin:0; font-size:18px; color:#06b6d4; font-weight:700; letter-spacing:0.5px;">🎥 LIVE MEDIA DETECTOR (${items.length} detected)</h2><span style="font-size:12px; color:#94a3b8;">Click any media card to download instantly or copy direct link</span>`;
-
-    const btnRow = document.createElement('div');
-    btnRow.style.cssText = `display:flex; gap:10px; align-items:center;`;
-
-    const btnDownloadAll = document.createElement('button');
-    btnDownloadAll.textContent = '⬇ Download All Media';
-    btnDownloadAll.style.cssText = `
-      background: #06b6d4;
-      color: #041019;
-      border: none;
-      border-radius: 6px;
-      padding: 8px 14px;
-      font-weight: 700;
-      cursor: pointer;
-      font-size: 12px;
-    `;
-    btnDownloadAll.addEventListener('click', () => {
-      items.forEach(it => ipcRenderer.invoke('downloads:download-url', it.src));
-      btnDownloadAll.textContent = `✓ Queued ${items.length} Downloads!`;
-    });
-
-    const btnClose = document.createElement('button');
-    btnClose.textContent = '✕ Close (Esc)';
-    btnClose.style.cssText = `
-      background: #1e293b;
-      color: #f1f5f9;
-      border: 1px solid #334155;
-      border-radius: 6px;
-      padding: 8px 14px;
-      font-weight: 600;
-      cursor: pointer;
-      font-size: 12px;
-    `;
-    btnClose.addEventListener('click', () => {
-      mediaScannerModal.remove();
-      mediaScannerModal = null;
-    });
-
-    btnRow.appendChild(btnDownloadAll);
-    btnRow.appendChild(btnClose);
-    header.appendChild(titleDiv);
-    header.appendChild(btnRow);
-    mediaScannerModal.appendChild(header);
-
-    // Grid Body
-    const grid = document.createElement('div');
-    grid.style.cssText = `
-      flex: 1;
-      overflow-y: auto;
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-      gap: 16px;
-      padding-bottom: 20px;
-    `;
-
-    if (items.length === 0) {
-      grid.innerHTML = '<div style="grid-column: 1/-1; text-align:center; padding:60px 0; color:#64748b; font-size:14px;">No active HTML5 video, audio, or high-res images detected on this page yet.<br>Play a video or refresh the page to scan again.</div>';
-    } else {
-      items.forEach(it => {
-        const card = document.createElement('div');
-        card.style.cssText = `
-          background: #0e1422;
-          border: 1px solid #1e293b;
-          border-radius: 8px;
-          overflow: hidden;
-          display: flex;
-          flex-direction: column;
-          box-shadow: 0 4px 12px rgba(0,0,0,0.5);
-          transition: transform 0.15s ease, border-color 0.15s ease;
-        `;
-        card.onmouseenter = () => { card.style.borderColor = '#06b6d4'; card.style.transform = 'translateY(-2px)'; };
-        card.onmouseleave = () => { card.style.borderColor = '#1e293b'; card.style.transform = 'none'; };
-
-        // Thumbnail / Preview
-        const previewDiv = document.createElement('div');
-        previewDiv.style.cssText = `height: 140px; background: #070a11; display:flex; align-items:center; justify-content:center; position:relative; overflow:hidden;`;
-
-        if (it.type === 'video') {
-          const vid = document.createElement('video');
-          vid.src = it.src;
-          vid.style.cssText = `width:100%; height:100%; object-fit:cover;`;
-          vid.muted = true;
-          vid.onmouseenter = () => vid.play();
-          vid.onmouseleave = () => vid.pause();
-          previewDiv.appendChild(vid);
-        } else if (it.type === 'image') {
-          const img = document.createElement('img');
-          img.src = it.src;
-          img.style.cssText = `width:100%; height:100%; object-fit:cover;`;
-          previewDiv.appendChild(img);
-        } else {
-          previewDiv.innerHTML = '<span style="font-size:36px;">🎵</span>';
-        }
-
-        // Tag pill
-        const tag = document.createElement('span');
-        tag.textContent = it.type.toUpperCase();
-        tag.style.cssText = `
-          position: absolute;
-          top: 8px;
-          left: 8px;
-          background: rgba(11, 15, 25, 0.85);
-          color: #06b6d4;
-          font-family: monospace;
-          font-size: 10px;
-          font-weight: bold;
-          padding: 2px 6px;
-          border-radius: 4px;
-          border: 1px solid rgba(6, 182, 212, 0.4);
-        `;
-        previewDiv.appendChild(tag);
-
-        // Details & Action
-        const bodyDiv = document.createElement('div');
-        bodyDiv.style.cssText = `padding: 12px; display:flex; flex-direction:column; gap:8px; flex:1; justify-content:space-between;`;
-
-        const urlText = document.createElement('div');
-        urlText.textContent = it.src;
-        urlText.title = it.src;
-        urlText.style.cssText = `
-          font-family: monospace;
-          font-size: 11px;
-          color: #94a3b8;
-          white-space: nowrap;
-          overflow: hidden;
-          text-overflow: ellipsis;
-        `;
-
-        const cardBtnRow = document.createElement('div');
-        cardBtnRow.style.cssText = `display:flex; gap:6px;`;
-
-        const dlCardBtn = document.createElement('button');
-        dlCardBtn.textContent = '⬇ 1-Click Download';
-        dlCardBtn.style.cssText = `
-          flex: 1;
-          background: #06b6d4;
-          color: #041019;
-          border: none;
-          border-radius: 4px;
-          padding: 6px;
-          font-size: 11px;
-          font-weight: 700;
-          cursor: pointer;
-        `;
-        dlCardBtn.addEventListener('click', () => {
-          ipcRenderer.invoke('downloads:download-url', it.src);
-          dlCardBtn.textContent = '✓ Downloading...';
-          setTimeout(() => { dlCardBtn.textContent = '⬇ 1-Click Download'; }, 2000);
-        });
-
-        const copyCardBtn = document.createElement('button');
-        copyCardBtn.textContent = '📋 Copy';
-        copyCardBtn.style.cssText = `
-          background: #1e293b;
-          color: #94a3b8;
-          border: 1px solid #334155;
-          border-radius: 4px;
-          padding: 6px 10px;
-          font-size: 11px;
-          cursor: pointer;
-        `;
-        copyCardBtn.addEventListener('click', () => {
-          navigator.clipboard.writeText(it.src);
-          copyCardBtn.textContent = '✓';
-          setTimeout(() => { copyCardBtn.textContent = '📋 Copy'; }, 2000);
-        });
-
-        cardBtnRow.appendChild(dlCardBtn);
-        cardBtnRow.appendChild(copyCardBtn);
-
-        bodyDiv.appendChild(urlText);
-        bodyDiv.appendChild(cardBtnRow);
-
-        card.appendChild(previewDiv);
-        card.appendChild(bodyDiv);
-        grid.appendChild(card);
-      });
-    }
-
-    mediaScannerModal.appendChild(grid);
-    (document.body || document.documentElement).appendChild(mediaScannerModal);
-
-    const onEsc = (e) => {
-      if (e.key === 'Escape' && mediaScannerModal) {
-        mediaScannerModal.remove();
-        mediaScannerModal = null;
-        document.removeEventListener('keydown', onEsc);
-      }
-    };
-    document.addEventListener('keydown', onEsc);
-  }
-
-  /* -------------------------------------------------------------------------- */
-  /* 8. IPC Handlers from Main Process                                         */
+  /* 7. IPC Handlers from Main Process                                         */
   /* -------------------------------------------------------------------------- */
 
   ipcRenderer.on('action:trigger-zapper', (e, state) => {
@@ -748,10 +483,6 @@ const { ipcRenderer } = require('electron');
 
   ipcRenderer.on('action:trigger-dark-mode', (e, state) => {
     toggleDarkMode(state);
-  });
-
-  ipcRenderer.on('action:trigger-media-scanner', () => {
-    openLiveMediaScanner();
   });
 
   ipcRenderer.on('action:rules-updated', (e, updatedRules) => {

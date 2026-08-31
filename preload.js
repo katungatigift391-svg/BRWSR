@@ -32,6 +32,8 @@ contextBridge.exposeInMainWorld('browserAPI', {
   // Downloads Engine & Custom Folder
   getDownloads: () => ipcRenderer.invoke('downloads:get'),
   downloadUrl: (url) => ipcRenderer.invoke('downloads:download-url', url),
+  downloadYtdlp: (url) => ipcRenderer.invoke('downloads:ytdlp', url),
+  ytdlpAvailable: () => ipcRenderer.invoke('downloads:ytdlp-available'),
   openDownloadFile: (filePath) => ipcRenderer.invoke('downloads:open-file', filePath),
   showDownloadInFolder: (filePath) => ipcRenderer.invoke('downloads:show-in-folder', filePath),
   cancelDownload: (id) => ipcRenderer.invoke('downloads:cancel', id),
@@ -45,6 +47,11 @@ contextBridge.exposeInMainWorld('browserAPI', {
   // Settings & History Logging Toggle
   getSettings: () => ipcRenderer.invoke('settings:get'),
   setHistoryLogging: (enabled) => ipcRenderer.invoke('settings:set-history-logging', enabled),
+
+  // In-App Updates & External Link Dispatch
+  getVersion: () => ipcRenderer.invoke('app:get-version'),
+  checkUpdates: () => ipcRenderer.invoke('app:check-updates'),
+  openExternalUrl: (url) => ipcRenderer.invoke('app:open-external-url', url),
 
   // Media Sniffer
   getMediaStreams: (tabId) => ipcRenderer.invoke('media:get-streams', tabId),

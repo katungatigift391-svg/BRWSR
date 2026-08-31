@@ -1,6 +1,7 @@
 const { app, BrowserWindow, WebContentsView, BrowserView, session, ipcMain, shell, dialog, Menu, net } = require('electron');
 const path = require('path');
 const fs = require('fs');
+const { spawn } = require('child_process');
 
 // Remove default Electron menu bar (File, Edit, View, Window, Help)
 Menu.setApplicationMenu(null);
@@ -782,6 +783,106 @@ ipcMain.handle('downloads:clear', () => {
   downloadsList.push(...remaining);
   return true;
 });
+
+// yt-dlp Integration
+function getYtdlpPath() {
+  const binName = process.platform === 'win32' ? 'yt-dlp.exe' : 'yt-dlp';
+  if (app.isPackaged) {
+    return path.join(process.resourcesPath, 'bin', binName);
+  }
+  return path.join(__dirname, 'assets', 'bin', binName);
+}
+
+function isDirectMediaUrl(url) {
+  return /\.(mp4|webm|mkv|avi|mov|m3u8|mpd|ts|mp3|ogg|flac|wav|aac)(\?|$)/i.test(url);
+}
+
+ipcMain.handle('downloads:ytdlp', async (e, url) => {
+  if (!url) return { success: false, error: 'No URL' };
+
+  const ytdlpBin = getYtdlpPath();
+  const hasYtdlp = fs.existsSync(ytdlpBin);
+
+  // Fallback: direct media URLs use native Electron download
+  if (!hasYtdlp || isDirectMediaUrl(url)) {
+    if (mainWindow) mainWindow.webContents.downloadURL(url);
+    return { success: true, method: 'native' };
+  }
+
+  const downloadDir = (settingsData.downloadDir && fs.existsSync(settingsData.downloadDir))
+    ? settingsData.downloadDir
+    : app.getPath('downloads');
+
+  const downloadId = 'ytdl_' + Date.now();
+  const entry = {
+    id: downloadId,
+    filename: 'Fetching title...',
+    savePath: downloadDir,
+    url,
+    state: 'progressing',
+    percent: 0,
+    receivedBytes: 0,
+    totalBytes: 0,
+    speed: 'yt-dlp'
+  };
+  downloadsList.unshift(entry);
+
+  const notify = (win) => {
+    if (win) win.webContents.send('downloads:progress', { ...entry });
+  };
+
+  const args = [
+    '--no-part',
+    '--no-playlist',
+    '--newline',
+    '--progress',
+    '--format', 'bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best',
+    '--merge-output-format', 'mp4',
+    '--output', path.join(downloadDir, '%(title)s.%(ext)s'),
+    url
+  ];
+
+  const proc = spawn(ytdlpBin, args, { windowsHide: true });
+  activeDownloadItems.set(downloadId, { cancel: () => proc.kill('SIGTERM') });
+
+  proc.stdout.on('data', (chunk) => {
+    const line = chunk.toString();
+    // Parse [download] XX% line
+    const pctMatch = line.match(/\[download\]\s+(\d+\.?\d*)%/);
+    if (pctMatch) {
+      entry.percent = parseFloat(pctMatch[1]);
+    }
+    // Parse speed
+    const spdMatch = line.match(/at\s+([\d.]+[KMG]iB\/s)/);
+    if (spdMatch) entry.speed = spdMatch[1];
+    // Parse ETA / title
+    const destMatch = line.match(/\[download\] Destination: (.+)/);
+    if (destMatch) {
+      entry.filename = path.basename(destMatch[1].trim());
+      entry.savePath = destMatch[1].trim();
+    }
+    notify(mainWindow);
+  });
+
+  proc.stderr.on('data', (chunk) => {
+    const line = chunk.toString();
+    console.error('[yt-dlp stderr]', line.trim());
+  });
+
+  proc.on('close', (code) => {
+    activeDownloadItems.delete(downloadId);
+    entry.state = code === 0 ? 'completed' : 'interrupted';
+    entry.percent = code === 0 ? 100 : entry.percent;
+    if (mainWindow) {
+      mainWindow.webContents.send('downloads:completed', { ...entry });
+    }
+  });
+
+  return { success: true, method: 'ytdlp', id: downloadId };
+});
+
+ipcMain.handle('downloads:ytdlp-available', () => fs.existsSync(getYtdlpPath()));
+
 
 // Media Sniffer
 ipcMain.handle('media:get-streams', (e, tabId) => {
