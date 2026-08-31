@@ -1,65 +1,105 @@
 # Contributing to BRWSR
 
-## 🛠️ Developer Workspace & Environment
-
-BRWSR is built with **Electron (Node.js + Chromium + Chrome DevTools Protocol)** for Windows and Desktop OSes.
+Thank you for your interest in contributing to **BRWSR**. This document outlines the project architecture, development workflow, coding standards, and submission guidelines for external contributors.
 
 ---
 
-## 🌿 Git Branching Strategy
+## 🏛️ Architecture Overview
 
-We follow a strict **Dev → Main** release flow:
+BRWSR is built on Electron using Chromium and Node.js with zero external tracking dependencies. The project is divided into four core components:
 
 ```
-main        ← Stable, production-ready code. Tagged releases (v1.0.0, v1.1.0) only.
-dev         ← Active daily development branch. All feature work lands here first.
-feature/*   ← Optional isolated branches for larger features.
+├── main.js             # Electron Main Process (Lifecycle, CDP, WebContentsView, IPC, Downloads)
+├── preload.js          # ContextBridge layer between Main and Browser UI Shell
+├── page-preload.js     # Early-injection script running inside navigated web pages
+├── src/ui/
+│   ├── index.html      # Browser chrome & drawer markup
+│   ├── style.css       # Design tokens, cyber/slate dark theme
+│   └── app.js          # Browser shell state controller & shortcut dispatch
+└── .github/workflows/  # CI/CD multi-platform build & release automation
 ```
 
-### Daily Development Loop
+* **Process Isolation**: All web pages load inside isolated `WebContentsView` instances with sandbox constraints.
+* **CDP Automation**: Low-level V8 execution controls (e.g., JavaScript freeze) interact directly with the Chrome DevTools Protocol.
+* **Local Persistence**: User settings, history, bookmarks, and zapper selector rules are persisted locally to JSON files and are never synchronized over the network.
 
-1. Checkout `dev`:
+---
+
+## 🛠️ Development Setup
+
+### Prerequisites
+* **Node.js**: `v20.x` or higher
+* **npm**: `v10.x` or higher
+* **Git**: `v2.x` or higher
+
+### Local Installation
+1. Fork and clone the repository:
    ```bash
-   git checkout dev
+   git clone https://github.com/katungatigift391-svg/BRWSR.git
+   cd BRWSR
    ```
-2. Start the local live development shell:
+2. Install dependencies:
+   ```bash
+   npm install
+   ```
+3. Launch the development browser:
    ```bash
    npm start
-   # or double-click start.bat
-   ```
-3. Test changes live without compiling.
-4. Commit your changes:
-   ```bash
-   git add .
-   git commit -m "feat: description of changes"
-   git push origin dev
    ```
 
 ---
 
-## 🚀 Releasing a New PC Version
+## 🌿 Branching Model & Workflow
 
-When you are ready to publish a new update for public download:
+The repository follows a standard `main` / `dev` branch workflow:
 
-1. **Merge `dev` into `main`**:
+| Branch | Purpose |
+| :--- | :--- |
+| `main` | Production-ready releases. Only tagged version bumps are merged here. |
+| `dev` | Active development branch. All feature branches and pull requests target `dev`. |
+| `feature/<name>` | Dedicated topic branch for new capabilities or substantial refactors. |
+| `fix/<name>` | Dedicated topic branch for bug fixes. |
+
+### Commit Message Conventions
+Commits should adhere to [Conventional Commits](https://www.conventionalcommits.org/):
+
+* `feat: add stream format filtering to media detector`
+* `fix: prevent native view occlusion on fullscreen toggle`
+* `refactor: optimize CDP debugger attachment lifecycle`
+* `docs: update keyboard shortcuts table`
+
+---
+
+## 📦 Building Distribution Packages
+
+To generate standalone executables locally:
+
+```bash
+# Windows Installer & Portable Executable (.exe)
+npm run build:win
+
+# Linux AppImage & Debian Package
+npm run build:linux
+```
+
+Build outputs will be placed in the `dist/` directory.
+
+---
+
+## 📋 Pull Request Checklist
+
+Before submitting a Pull Request:
+
+1. **Syntax & Verification**: Verify all JavaScript files pass static syntax validation:
    ```bash
-   git checkout main
-   git merge dev
+   node -c main.js preload.js page-preload.js src/ui/app.js
    ```
+2. **Zero Telemetry**: Ensure no tracking, telemetry hooks, or unrequested remote connections are introduced.
+3. **Target Branch**: Ensure your Pull Request is opened against the `dev` branch.
+4. **Documentation**: Update [README.md](README.md) or relevant docstrings if your change introduces new shortcuts, APIs, or configuration parameters.
 
-2. **Bump version & tag**:
-   ```bash
-   # Bump version (e.g. 1.0.0 -> 1.0.1 or 1.1.0)
-   npm version patch   # or 'npm version minor'
+---
 
-   # Push main with the new tag
-   git push origin main --tags
-   ```
+## 🔒 Security & Vulnerability Reporting
 
-3. **Automatic Cloud Release**:
-   * Pushing the `v*` tag triggers the [GitHub Actions Release Workflow](.github/workflows/release.yml).
-   * It builds the Windows installer `.exe` and the standalone portable `.exe`.
-   * Automatically publishes them to your [GitHub Releases](https://github.com/katungatigift391-svg/BRWSR/releases) page for 1-click user downloads.
-
-4. **Local Windows Build (Optional)**:
-   * Run `build.bat` locally to compile `.exe` files into the `dist/` directory.
+If you discover a security issue or vulnerability in BRWSR, please report it responsibly via GitHub Security Advisories or by contacting the maintainers directly. Do not open public issues for sensitive security vulnerabilities.
